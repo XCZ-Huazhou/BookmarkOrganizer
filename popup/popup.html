@@ -144,6 +144,38 @@
         </div>
       </div>
     </div>
+
+    <!-- 去重对话框 -->
+    <div id="dedup-dialog" class="dialog-overlay" style="display:none;">
+      <div class="dialog">
+        <div class="dialog-header">
+          <span>移除重复书签</span>
+          <button class="dialog-close" id="dedup-dialog-close">&times;</button>
+        </div>
+        <div class="dialog-body">
+          <div class="dedup-field">
+            <label for="dedup-mode">匹配方式</label>
+            <select id="dedup-mode" class="sort-select">
+              <option value="loose" selected>宽松（忽略协议、www.、#锚点、尾部斜杠）</option>
+              <option value="hash">忽略 #锚点和尾部斜杠</option>
+              <option value="exact">精确（完整 URL 一致）</option>
+            </select>
+          </div>
+          <div class="dedup-field">
+            <label for="dedup-keep">每组保留</label>
+            <select id="dedup-keep" class="sort-select">
+              <option value="first" selected>位置靠前的</option>
+              <option value="oldest">最早添加的</option>
+            </select>
+          </div>
+          <div id="dedup-preview" class="dedup-preview">扫描中…</div>
+        </div>
+        <div class="dialog-footer">
+          <button id="dedup-confirm" class="btn-fill" disabled>移除多余项</button>
+          <button id="dedup-cancel" class="btn-ghost">取消</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="../lib/browser-api.js"></script>

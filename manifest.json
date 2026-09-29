@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "书签整理助手",
-  "version": "2.3.0",
+  "version": "0.1.2",
   "description": "智能书签整理工具：树形可视化、拖拽整理、智能分类、死链检测、WebDAV 跨平台同步",
   "background": {
     "service_worker": "background.js"

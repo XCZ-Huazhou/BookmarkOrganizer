@@ -418,11 +418,84 @@
     try { await refreshTree(); } catch {}
   }
 
-  async function removeDuplicateBookmarks() {
-    if (!confirm('移除重复书签？同一 URL 只保留第一个。')) return;
-    const count = await Organizer.removeDuplicates(flatNodes);
-    showOrganizeResult(`移除了 ${count} 个重复书签`, count > 0 ? 'success' : 'info');
+  // ==================== 去重对话框 ====================
+  let dedupResult = null;
+
+  function openDedupDialog() {
+    $('#dedup-mode').value = 'loose';
+    $('#dedup-keep').value = 'first';
+    $('#dedup-dialog').style.display = 'flex';
+    scanDedup();
+  }
+
+  function hideDedupDialog() {
+    $('#dedup-dialog').style.display = 'none';
+    dedupResult = null;
+  }
+
+  function scanDedup() {
+    const mode = $('#dedup-mode').value;
+    const keep = $('#dedup-keep').value;
+    dedupResult = Organizer.findDuplicates(flatNodes, mode, keep);
+    renderDedupPreview();
+  }
+
+  function renderDedupPreview() {
+    const box = $('#dedup-preview');
+    const btn = $('#dedup-confirm');
+    box.innerHTML = '';
+    if (!dedupResult || dedupResult.groups.length === 0) {
+      box.textContent = '当前匹配方式下没有发现重复书签。';
+      btn.disabled = true;
+      btn.textContent = '移除多余项';
+      return;
+    }
+    const head = document.createElement('div');
+    head.innerHTML = '发现 <b>' + dedupResult.groups.length + '</b> 组重复，共 <b>' + dedupResult.extraCount + '</b> 个多余书签：';
+    box.appendChild(head);
+    dedupResult.groups.slice(0, 20).forEach(function (g) {
+      const row = document.createElement('div');
+      row.className = 'dup-row';
+      const keepSpan = document.createElement('span');
+      keepSpan.className = 'dup-keep';
+      keepSpan.textContent = g.keep.title || g.keep.url;
+      keepSpan.title = g.keep.url;
+      row.appendChild(keepSpan);
+      row.appendChild(document.createTextNode(' ← 移除 ' + g.extras.length + ' 个重复'));
+      box.appendChild(row);
+    });
+    if (dedupResult.groups.length > 20) {
+      const more = document.createElement('div');
+      more.textContent = '… 其余 ' + (dedupResult.groups.length - 20) + ' 组';
+      box.appendChild(more);
+    }
+    btn.disabled = false;
+    btn.textContent = '移除 ' + dedupResult.extraCount + ' 个多余书签';
+  }
+
+  async function confirmDedup() {
+    if (!dedupResult || dedupResult.groups.length === 0) return;
+    const btn = $('#dedup-confirm');
+    btn.disabled = true;
+    btn.textContent = '移除中…';
+    let removed = 0;
+    for (const g of dedupResult.groups) {
+      for (const ex of g.extras) {
+        try { await BrowserAPI.bookmarks.remove(ex.id); removed++; } catch {}
+      }
+    }
+    hideDedupDialog();
+    showOrganizeResult('已移除 ' + removed + ' 个重复书签', removed > 0 ? 'success' : 'info');
     try { await refreshTree(); } catch {}
+  }
+
+  function bindDedupDialog() {
+    bind($('#btn-remove-dupes'), 'click', openDedupDialog);
+    bind($('#dedup-dialog-close'), 'click', hideDedupDialog);
+    bind($('#dedup-cancel'), 'click', hideDedupDialog);
+    bind($('#dedup-confirm'), 'click', confirmDedup);
+    bind($('#dedup-mode'), 'change', scanDedup);
+    bind($('#dedup-keep'), 'change', scanDedup);
   }
 
   function showOrganizeResult(msg, type) {
@@ -461,7 +534,8 @@
     bind($('#btn-sort-all'), 'click', sortAll);
     bind($('#btn-merge-dupes'), 'click', mergeDuplicateFolders);
     bind($('#btn-clean-empty'), 'click', cleanEmptyFolders);
-    bind($('#btn-remove-dupes'), 'click', removeDuplicateBookmarks);
+    bind($('#btn-remove-dupes'), 'click', openDedupDialog);
+    bindDedupDialog();
 
     // 规则分类
     bind($('#btn-auto-classify'), 'click', async () => {
