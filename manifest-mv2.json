@@ -1,0 +1,35 @@
+{
+  "manifest_version": 2,
+  "name": "书签整理助手",
+  "version": "0.1.1",
+  "description": "智能书签整理工具：树形可视化、拖拽整理、智能分类、死链检测、WebDAV 跨平台同步",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "browser_action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "scripts": ["lib/browser-api.js", "lib/organizer.js", "lib/sync-engine.js", "background.js"],
+    "persistent": true
+  },
+  "permissions": [
+    "bookmarks",
+    "storage",
+    "tabs",
+    "activeTab",
+    "alarms",
+    "<all_urls>"
+  ],
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  }
+}

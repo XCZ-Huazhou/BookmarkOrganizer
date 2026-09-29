@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>书签整理助手</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app">
+    <header class="toolbar">
+      <h1 class="title">书签整理助手</h1>
+      <div class="toolbar-actions">
+        <button id="btn-settings" class="icon-btn" title="设置">&#9881;</button>
+      </div>
+    </header>
+
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="搜索书签..." autocomplete="off">
+      <button id="btn-clear-search" class="icon-btn search-clear" title="清除">&times;</button>
+    </div>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="tree">书签树</button>
+      <button class="tab" data-tab="organize">排序整理</button>
+      <button class="tab" data-tab="classify">智能分类</button>
+      <button class="tab" data-tab="deadlink">死链检测</button>
+      <button class="tab" data-tab="merge">合并导入</button>
+      <button class="tab" data-tab="stats">统计</button>
+    </nav>
+
+    <div class="batch-bar" id="batch-bar" style="display:none;">
+      <span id="selected-count">已选 0 项</span>
+      <button id="btn-batch-move" class="btn-outline">移动</button>
+      <button id="btn-batch-delete" class="btn-fill btn-danger">删除</button>
+      <button id="btn-batch-cancel" class="btn-ghost">取消</button>
+    </div>
+
+    <!-- 书签树面板 -->
+    <div class="panel active" id="panel-tree">
+      <div class="panel-toolbar">
+        <button id="btn-toggle-expand" class="btn-ghost">全部展开</button>
+        <button id="btn-select-mode" class="btn-pill">多选</button>
+      </div>
+      <div id="bookmark-tree" class="tree-container"></div>
+      <div id="tree-hint" class="panel-hint">浏览所有书签，右键可重命名、移动或删除，支持搜索和多选批量操作</div>
+    </div>
+
+    <!-- 排序整理面板 -->
+    <div class="panel" id="panel-organize">
+      <div class="panel-toolbar">
+        <select id="sort-by" class="sort-select">
+          <option value="title-asc">名称 A→Z</option>
+          <option value="title-desc">名称 Z→A</option>
+          <option value="date-asc">日期 旧→新</option>
+          <option value="date-desc">日期 新→旧</option>
+          <option value="domain">按域名分组</option>
+        </select>
+        <button id="btn-sort-all" class="btn-fill">排序书签</button>
+      </div>
+      <div class="panel-toolbar">
+        <button id="btn-merge-dupes" class="btn-ghost">合并同名文件夹</button>
+        <button id="btn-clean-empty" class="btn-ghost">清理空文件夹</button>
+        <button id="btn-remove-dupes" class="btn-ghost" style="color:var(--danger);">移除重复书签</button>
+      </div>
+      <div id="organize-preview" class="organize-preview"></div>
+      <div id="organize-result" class="organize-result"></div>
+      <div class="panel-hint">选择排序方式后点击「排序书签」，或使用上方工具整理书签</div>
+    </div>
+
+    <!-- 智能分类面板 -->
+    <div class="panel" id="panel-classify">
+      <div class="panel-toolbar">
+        <button id="btn-auto-classify" class="btn-pill">规则分类</button>
+        <button id="btn-rule-stats" class="btn-pill">规则命中统计</button>
+        <button id="btn-cluster" class="btn-pill">相似聚类</button>
+        <button id="btn-move-all" class="btn-fill" style="display:none;">移入选中文件夹</button>
+      </div>
+      <div id="classify-result" class="classify-result"></div>
+      <div class="panel-hint">选择分类方式：按规则自动分类、查看规则命中情况、或按相似度聚类</div>
+    </div>
+
+    <!-- 死链检测面板 -->
+    <div class="panel" id="panel-deadlink">
+      <div class="panel-toolbar">
+        <button id="btn-check-links" class="btn-fill">开始检测</button>
+        <button id="btn-stop-check" class="btn-fill btn-danger" style="display:none;">停止检测</button>
+        <button id="btn-clean-dead" class="btn-fill btn-danger" style="display:none;">清理无效书签</button>
+      </div>
+      <div id="deadlink-progress" class="progress-bar" style="display:none;">
+        <div class="progress-fill" id="progress-fill"></div>
+        <span class="progress-text" id="progress-text">0%</span>
+      </div>
+      <div id="deadlink-result" class="deadlink-result"></div>
+      <div class="panel-hint">点击「开始检测」后即可关闭弹窗，检测会一直在后台运行；随时点开图标查看进度。建议一次性检测完成，非必要不要中途点「停止检测」</div>
+    </div>
+
+    <!-- 合并导入面板 -->
+    <div class="panel" id="panel-merge">
+      <div class="panel-toolbar">
+        <button id="btn-import-select" class="btn-fill">选择书签文件（支持多选）</button>
+        <input type="file" id="import-file-input" accept=".html,.json" multiple style="display:none;">
+        <button id="btn-import-execute" class="btn-fill" style="display:none;">开始合并</button>
+      </div>
+      <div class="panel-toolbar" id="merge-target-bar" style="display:none;">
+        <span style="font-size:12px;">文件夹名：</span>
+        <input type="text" id="merge-folder-name" class="sort-select" value="" placeholder="导入书签" style="flex:1;">
+      </div>
+      <div id="merge-progress" class="progress-bar" style="display:none;">
+        <div class="progress-fill" id="merge-progress-fill"></div>
+        <span class="progress-text" id="merge-progress-text">0%</span>
+      </div>
+      <div id="merge-preview" class="merge-preview"></div>
+      <div id="merge-result" class="organize-result"></div>
+      <div class="panel-hint">选择从其他浏览器导出的书签文件（HTML 或 JSON），支持同时选择多个文件合并导入</div>
+    </div>
+
+    <!-- 统计面板 -->
+    <div class="panel" id="panel-stats">
+      <div id="stats-content" class="stats-content"></div>
+      <div class="panel-hint">查看书签总数、域名分布、文件夹层级等统计信息</div>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div id="context-menu" class="context-menu" style="display:none;">
+      <div class="context-item" data-action="rename">重命名</div>
+      <div class="context-item" data-action="move">移动到...</div>
+      <div class="context-item" data-action="open">在新标签页打开</div>
+      <div class="context-divider"></div>
+      <div class="context-item context-danger" data-action="delete">删除</div>
+    </div>
+
+    <!-- 移动目标选择弹窗 -->
+    <div id="move-dialog" class="dialog-overlay" style="display:none;">
+      <div class="dialog">
+        <div class="dialog-header">
+          <span>选择目标文件夹</span>
+          <button class="dialog-close" id="move-dialog-close">&times;</button>
+        </div>
+        <div id="move-folder-tree" class="tree-container"></div>
+        <div class="dialog-footer">
+          <button id="move-dialog-confirm" class="btn-fill">移动</button>
+          <button id="move-dialog-cancel" class="btn-ghost">取消</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../lib/browser-api.js"></script>
+  <script src="../lib/storage.js"></script>
+  <script src="../lib/bookmark-tree.js"></script>
+  <script src="../lib/classifier.js"></script>
+  <script src="../lib/dead-link.js"></script>
+  <script src="../lib/organizer.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

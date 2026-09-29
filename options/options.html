@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>书签整理助手 - 设置</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <h1>书签整理助手 - 设置</h1>
+
+    <!-- 分类规则管理 -->
+    <section class="section">
+      <h2>分类规则</h2>
+      <p class="section-desc">配置自动分类规则，支持域名、关键词、正则表达式、URL路径、多条件组合</p>
+
+      <div class="rule-form">
+        <select id="rule-type">
+          <option value="domain">域名匹配</option>
+          <option value="keyword">关键词匹配</option>
+          <option value="regex">正则表达式</option>
+          <option value="url_path">URL路径段</option>
+          <option value="compound">多条件组合</option>
+        </select>
+        <input type="text" id="rule-pattern" placeholder="如 github.com 或 教程">
+        <input type="text" id="rule-category" placeholder="分类名称，如 开发">
+        <button id="btn-add-rule" class="btn-primary">添加规则</button>
+      </div>
+
+      <!-- 高级规则选项 -->
+      <div id="advanced-rule-options" class="advanced-options" style="display:none;">
+        <div class="config-row">
+          <label>正则标志</label>
+          <input type="text" id="rule-flags" value="i" placeholder="如 i, g, gi">
+          <span class="config-hint">i=忽略大小写, g=全局匹配</span>
+        </div>
+        <div class="config-row">
+          <label>匹配目标</label>
+          <select id="rule-target">
+            <option value="both">标题+URL</option>
+            <option value="title">仅标题</option>
+            <option value="url">仅URL</option>
+          </select>
+        </div>
+        <div class="config-row">
+          <label>组合逻辑</label>
+          <select id="rule-logic">
+            <option value="AND">AND（全部满足）</option>
+            <option value="OR">OR（任一满足）</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="rules-list" class="rules-list"></div>
+
+      <div class="rule-actions">
+        <button id="btn-reset-rules" class="btn-small">恢复默认规则</button>
+        <button id="btn-export-rules" class="btn-small">导出规则</button>
+        <button id="btn-import-rules" class="btn-small">导入规则</button>
+        <input type="file" id="import-rules-file" accept=".json" style="display:none;">
+      </div>
+    </section>
+
+    <!-- 聚类配置 -->
+    <section class="section">
+      <h2>相似聚类配置</h2>
+      <div class="config-row">
+        <label>相似度阈值</label>
+        <input type="number" id="cluster-threshold" min="0.1" max="0.9" step="0.05" value="0.35">
+        <span class="config-hint">0.1-0.9，越低聚类越宽松（推荐 0.3-0.4）</span>
+      </div>
+      <button id="btn-save-cluster" class="btn-primary">保存配置</button>
+    </section>
+
+    <!-- 检测配置 -->
+    <section class="section">
+      <h2>死链检测配置</h2>
+      <div class="config-row">
+        <label>并发数</label>
+        <input type="number" id="config-concurrency" min="1" max="20" value="5">
+        <span class="config-hint">同时检测的链接数量，建议 3-10</span>
+      </div>
+      <div class="config-row">
+        <label>超时时间 (ms)</label>
+        <input type="number" id="config-timeout" min="3000" max="30000" step="1000" value="10000">
+        <span class="config-hint">单个链接的检测超时时间</span>
+      </div>
+      <button id="btn-save-config" class="btn-primary">保存配置</button>
+    </section>
+
+    <!-- 跨平台同步 -->
+    <section class="section">
+      <h2>跨平台同步</h2>
+      <p class="section-desc">在不同浏览器、不同设备、不同账号之间同步书签。推荐用同步文件：免账号、免注册，一个月一两次手动点一下即可</p>
+
+      <!-- 方式一：同步文件（免账号） -->
+      <h3 style="font-size:14px; margin-bottom:8px;">方式一：同步文件（免账号，推荐）</h3>
+      <div class="export-actions">
+        <button id="btn-file-export" class="btn-primary">导出同步文件</button>
+        <button id="btn-file-import" class="btn-primary">导入同步文件（合并）</button>
+        <input type="file" id="file-import-input" accept=".json" style="display:none;">
+      </div>
+      <p class="config-hint" style="margin-top:8px;">
+        流程：导出文件 → 用微信/网盘等传到另一台设备 → 那边导入 → 再导出回传即可双向互通。
+        导入按 URL 并集合并，不删除任何书签；导入后可自动把合并结果写回原文件。
+      </p>
+      <div id="file-sync-status" class="sync-status" style="display:none;"></div>
+    </section>
+
+    <!-- 方式二：WebDAV（进阶） -->
+    <details class="section">
+      <summary style="cursor:pointer; font-weight:600;">方式二：WebDAV 网盘自动同步（进阶，需已有网盘账号）</summary>
+      <div style="margin-top:12px;">
+      <div class="config-row">
+        <label>服务器预设</label>
+        <select id="sync-preset">
+          <option value="">— 选择服务 —</option>
+          <option value="https://dav.jianguoyun.com/dav/">坚果云</option>
+          <option value="custom">自定义 WebDAV</option>
+        </select>
+        <span class="config-hint">坚果云需在其官网生成「应用密码」</span>
+      </div>
+      <div class="config-row">
+        <label>服务器地址</label>
+        <input type="text" id="sync-server" placeholder="https://dav.jianguoyun.com/dav/">
+      </div>
+      <div class="config-row">
+        <label>用户名</label>
+        <input type="text" id="sync-username" autocomplete="off" placeholder="WebDAV 账号">
+      </div>
+      <div class="config-row">
+        <label>密码</label>
+        <input type="password" id="sync-password" autocomplete="new-password" placeholder="应用密码（仅保存在本机）">
+      </div>
+      <div class="config-row">
+        <label>远程目录</label>
+        <input type="text" id="sync-remotedir" placeholder="书签同步">
+        <span class="config-hint">云端文件夹名，不存在会自动创建</span>
+      </div>
+      <div class="config-row">
+        <label>设备名称</label>
+        <input type="text" id="sync-device" placeholder="如：办公室电脑 / 手机">
+      </div>
+
+      <div class="config-row">
+        <label>自动同步</label>
+        <input type="checkbox" id="sync-auto">
+        <span class="config-hint">定时执行安全的双向合并</span>
+        <select id="sync-interval" style="margin-left:8px;">
+          <option value="15">每 15 分钟</option>
+          <option value="30">每 30 分钟</option>
+          <option value="60">每 1 小时</option>
+          <option value="120">每 2 小时</option>
+        </select>
+      </div>
+
+      <div class="export-actions">
+        <button id="btn-sync-save" class="btn-small">保存同步配置</button>
+        <button id="btn-sync-test" class="btn-small">测试连接</button>
+        <button id="btn-sync-merge" class="btn-primary">立即双向合并</button>
+      </div>
+      <div class="import-actions">
+        <button id="btn-sync-upload" class="btn-small">上传覆盖云端</button>
+        <button id="btn-sync-download" class="btn-small">下载覆盖本地</button>
+      </div>
+
+      <div id="sync-status" class="sync-status" style="display:none;"></div>
+      <p class="config-hint">
+        双向合并按 URL 并集新增书签，不会删除任何书签（删除不跨端传播）；
+        覆盖模式以所选一侧为准，操作前请确认。合并进来的书签位于「其他书签 / 书签同步」目录。
+      </p>
+      </div>
+    </details>
+
+    <!-- 数据导入导出 -->
+    <section class="section">
+      <h2>书签导入/导出</h2>
+      <div class="export-actions">
+        <button id="btn-export-html" class="btn-primary">导出为 HTML</button>
+        <button id="btn-export-json" class="btn-primary">导出为 JSON</button>
+      </div>
+      <div class="import-actions">
+        <button id="btn-import-bookmarks" class="btn-small">导入书签文件</button>
+        <input type="file" id="import-bookmarks-file" accept=".html,.json" style="display:none;">
+      </div>
+    </section>
+  </div>
+
+  <script src="../lib/browser-api.js"></script>
+  <script src="../lib/storage.js"></script>
+  <script src="../lib/bookmark-tree.js"></script>
+  <script src="../lib/sync-engine.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
