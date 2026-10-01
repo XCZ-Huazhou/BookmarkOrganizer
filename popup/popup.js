@@ -420,6 +420,7 @@
 
   // ==================== 去重对话框 ====================
   let dedupResult = null;
+  let dedupSelection = new Map(); // 手动模式：每组选中的保留项（组序号 → 书签 id）
 
   function openDedupDialog() {
     $('#dedup-mode').value = 'loose';
@@ -444,45 +445,109 @@
     const box = $('#dedup-preview');
     const btn = $('#dedup-confirm');
     box.innerHTML = '';
+    dedupSelection = new Map();
     if (!dedupResult || dedupResult.groups.length === 0) {
       box.textContent = '当前匹配方式下没有发现重复书签。';
       btn.disabled = true;
       btn.textContent = '移除多余项';
       return;
     }
+    const manual = $('#dedup-keep').value === 'manual';
     const head = document.createElement('div');
-    head.innerHTML = '发现 <b>' + dedupResult.groups.length + '</b> 组重复，共 <b>' + dedupResult.extraCount + '</b> 个多余书签：';
+    head.innerHTML = '发现 <b>' + dedupResult.groups.length + '</b> 组重复' +
+      (manual ? '，请逐组勾选要保留的书签：' : '，共 <b>' + dedupResult.extraCount + '</b> 个多余书签：');
     box.appendChild(head);
-    dedupResult.groups.slice(0, 20).forEach(function (g) {
-      const row = document.createElement('div');
-      row.className = 'dup-row';
-      const keepSpan = document.createElement('span');
-      keepSpan.className = 'dup-keep';
-      keepSpan.textContent = g.keep.title || g.keep.url;
-      keepSpan.title = g.keep.url;
-      row.appendChild(keepSpan);
-      row.appendChild(document.createTextNode(' ← 移除 ' + g.extras.length + ' 个重复'));
-      box.appendChild(row);
+
+    const showGroups = dedupResult.groups.slice(0, manual ? 10 : 20);
+    showGroups.forEach(function (g, gi) {
+      if (!manual) {
+        const row = document.createElement('div');
+        row.className = 'dup-row';
+        const keepSpan = document.createElement('span');
+        keepSpan.className = 'dup-keep';
+        keepSpan.textContent = g.keep.title || g.keep.url;
+        keepSpan.title = g.keep.url;
+        row.appendChild(keepSpan);
+        row.appendChild(document.createTextNode(' ← 移除 ' + g.extras.length + ' 个重复'));
+        box.appendChild(row);
+        return;
+      }
+      dedupSelection.set(gi, g.items[0].id);
+      const groupBox = document.createElement('div');
+      groupBox.className = 'dup-group';
+      g.items.forEach(function (it, ii) {
+        const label = document.createElement('label');
+        label.className = 'dup-choice';
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'dupgroup-' + gi;
+        radio.checked = ii === 0;
+        radio.addEventListener('change', function () {
+          dedupSelection.set(gi, it.id);
+          updateDedupButtonText();
+        });
+        label.appendChild(radio);
+        const name = document.createElement('span');
+        name.className = 'dup-name';
+        name.textContent = it.title || it.url;
+        name.title = it.url;
+        label.appendChild(name);
+        if (it.path) {
+          const pathSpan = document.createElement('span');
+          pathSpan.className = 'dup-path';
+          pathSpan.textContent = it.path;
+          pathSpan.title = it.path;
+          label.appendChild(pathSpan);
+        }
+        groupBox.appendChild(label);
+      });
+      box.appendChild(groupBox);
     });
-    if (dedupResult.groups.length > 20) {
+    const overflow = dedupResult.groups.length - showGroups.length;
+    if (overflow > 0) {
       const more = document.createElement('div');
-      more.textContent = '… 其余 ' + (dedupResult.groups.length - 20) + ' 组';
+      more.textContent = manual
+        ? '… 其余 ' + overflow + ' 组默认每组保留第一个'
+        : '… 其余 ' + overflow + ' 组';
       box.appendChild(more);
     }
-    btn.disabled = false;
-    btn.textContent = '移除 ' + dedupResult.extraCount + ' 个多余书签';
+    updateDedupButtonText();
+  }
+
+  // 汇总当前将被移除的书签：自动模式取各组 extras，手动模式按用户勾选
+  function currentDedupExtras() {
+    if (!dedupResult) return [];
+    const manual = $('#dedup-keep').value === 'manual';
+    const extras = [];
+    dedupResult.groups.forEach(function (g, gi) {
+      if (!manual) {
+        g.extras.forEach(function (ex) { extras.push(ex); });
+        return;
+      }
+      const keepId = dedupSelection.has(gi) ? dedupSelection.get(gi) : (g.items[0] && g.items[0].id);
+      g.items.forEach(function (it) {
+        if (it.id !== keepId) extras.push(it);
+      });
+    });
+    return extras;
+  }
+
+  function updateDedupButtonText() {
+    const btn = $('#dedup-confirm');
+    const n = currentDedupExtras().length;
+    btn.disabled = n === 0;
+    btn.textContent = n > 0 ? '移除 ' + n + ' 个多余书签' : '移除多余项';
   }
 
   async function confirmDedup() {
-    if (!dedupResult || dedupResult.groups.length === 0) return;
+    const targets = currentDedupExtras();
+    if (targets.length === 0) return;
     const btn = $('#dedup-confirm');
     btn.disabled = true;
     btn.textContent = '移除中…';
     let removed = 0;
-    for (const g of dedupResult.groups) {
-      for (const ex of g.extras) {
-        try { await BrowserAPI.bookmarks.remove(ex.id); removed++; } catch {}
-      }
+    for (const ex of targets) {
+      try { await BrowserAPI.bookmarks.remove(ex.id); removed++; } catch {}
     }
     hideDedupDialog();
     showOrganizeResult('已移除 ' + removed + ' 个重复书签', removed > 0 ? 'success' : 'info');
