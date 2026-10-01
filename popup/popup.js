@@ -421,6 +421,7 @@
   // ==================== 去重对话框 ====================
   let dedupResult = null;
   let dedupSelection = new Map(); // 手动模式：每组选中的保留项（组序号 → 书签 id）
+  let dedupKeepAll = new Set();   // 手动模式：整组保留（不删任何项）的组序号
 
   function openDedupDialog() {
     $('#dedup-mode').value = 'loose';
@@ -446,6 +447,7 @@
     const btn = $('#dedup-confirm');
     box.innerHTML = '';
     dedupSelection = new Map();
+    dedupKeepAll = new Set();
     if (!dedupResult || dedupResult.groups.length === 0) {
       box.textContent = '当前匹配方式下没有发现重复书签。';
       btn.disabled = true;
@@ -454,12 +456,31 @@
     }
     const manual = $('#dedup-keep').value === 'manual';
     const head = document.createElement('div');
+    head.className = 'dup-head';
     head.innerHTML = '发现 <b>' + dedupResult.groups.length + '</b> 组重复' +
-      (manual ? '，请逐组勾选要保留的书签：' : '，共 <b>' + dedupResult.extraCount + '</b> 个多余书签：');
+      (manual ? '，逐组勾选要保留的书签（也可整组保留）：' : '，共 <b>' + dedupResult.extraCount + '</b> 个多余书签：');
     box.appendChild(head);
 
-    const showGroups = dedupResult.groups.slice(0, manual ? 10 : 20);
+    const showGroups = dedupResult.groups.slice(0, manual ? 30 : 20);
     showGroups.forEach(function (g, gi) {
+      const groupEl = document.createElement('div');
+      groupEl.className = 'dup-group';
+
+      // 组头：编号 + 归一化域名（成员数），手动模式附整组保留
+      let keyText = g.key;
+      try { keyText = new URL(g.key).host || g.key; } catch {}
+      const gh = document.createElement('div');
+      gh.className = 'dup-group-head';
+      const ghTitle = document.createElement('b');
+      ghTitle.textContent = '第 ' + (gi + 1) + ' 组';
+      gh.appendChild(ghTitle);
+      const ghKey = document.createElement('span');
+      ghKey.className = 'dup-key';
+      ghKey.textContent = keyText + '（' + g.items.length + ' 选 1）';
+      ghKey.title = g.key;
+      gh.appendChild(ghKey);
+      groupEl.appendChild(gh);
+
       if (!manual) {
         const row = document.createElement('div');
         row.className = 'dup-row';
@@ -469,12 +490,24 @@
         keepSpan.title = g.keep.url;
         row.appendChild(keepSpan);
         row.appendChild(document.createTextNode(' ← 移除 ' + g.extras.length + ' 个重复'));
-        box.appendChild(row);
+        groupEl.appendChild(row);
+        box.appendChild(groupEl);
         return;
       }
+
+      const keepAllBtn = document.createElement('button');
+      keepAllBtn.type = 'button';
+      keepAllBtn.className = 'dup-keepall';
+      keepAllBtn.textContent = '整组保留';
+      keepAllBtn.addEventListener('click', function () {
+        if (dedupKeepAll.has(gi)) dedupKeepAll.delete(gi);
+        else dedupKeepAll.add(gi);
+        groupEl.classList.toggle('dup-kept', dedupKeepAll.has(gi));
+        updateDedupButtonText();
+      });
+      gh.appendChild(keepAllBtn);
+
       dedupSelection.set(gi, g.items[0].id);
-      const groupBox = document.createElement('div');
-      groupBox.className = 'dup-group';
       g.items.forEach(function (it, ii) {
         const label = document.createElement('label');
         label.className = 'dup-choice';
@@ -484,6 +517,8 @@
         radio.checked = ii === 0;
         radio.addEventListener('change', function () {
           dedupSelection.set(gi, it.id);
+          dedupKeepAll.delete(gi);
+          groupEl.classList.remove('dup-kept');
           updateDedupButtonText();
         });
         label.appendChild(radio);
@@ -507,9 +542,9 @@
         meta.title = (it.url || '') + (it.path ? ' · ' + it.path : '');
         textWrap.appendChild(meta);
         label.appendChild(textWrap);
-        groupBox.appendChild(label);
+        groupEl.appendChild(label);
       });
-      box.appendChild(groupBox);
+      box.appendChild(groupEl);
     });
     const overflow = dedupResult.groups.length - showGroups.length;
     if (overflow > 0) {
@@ -519,15 +554,17 @@
         : '… 其余 ' + overflow + ' 组';
       box.appendChild(more);
     }
+    box.scrollTop = 0;
     updateDedupButtonText();
   }
 
-  // 汇总当前将被移除的书签：自动模式取各组 extras，手动模式按用户勾选
+  // 汇总当前将被移除的书签：自动模式取各组 extras，手动模式按用户勾选（整组保留的组豁免）
   function currentDedupExtras() {
     if (!dedupResult) return [];
     const manual = $('#dedup-keep').value === 'manual';
     const extras = [];
     dedupResult.groups.forEach(function (g, gi) {
+      if (manual && dedupKeepAll.has(gi)) return;
       if (!manual) {
         g.extras.forEach(function (ex) { extras.push(ex); });
         return;
@@ -569,6 +606,13 @@
     bind($('#dedup-confirm'), 'click', confirmDedup);
     bind($('#dedup-mode'), 'change', scanDedup);
     bind($('#dedup-keep'), 'change', scanDedup);
+    // 滚轮降步长：预览区每次固定滚约一行半，不受系统"一次滚动 N 行"影响
+    const box = $('#dedup-preview');
+    box.addEventListener('wheel', function (e) {
+      if (!e.deltaY) return;
+      e.preventDefault();
+      box.scrollTop += (e.deltaY > 0 ? 56 : -56);
+    }, { passive: false });
   }
 
   function showOrganizeResult(msg, type) {

@@ -195,3 +195,17 @@ body {
 .dup-text .dup-name { color: var(--text); }
 .dup-text .dup-meta { font-size: 11px; color: var(--text-secondary); }
 .dup-choice input[type="radio"] { margin-top: 3px; }
+
+/* 去重对话框：更大的窗口与分组导航 */
+#dedup-dialog .dialog { width: 480px; max-width: 94vw; height: auto; max-height: min(640px, 88vh); }
+#dedup-dialog .dialog-body { flex: 1; min-height: 0; }
+#dedup-preview { flex: 1; min-height: 260px; max-height: none; padding-top: 0; }
+.dup-head { position: sticky; top: 0; z-index: 1; background: var(--bg-gray, #f5f6f8); margin: 0 -10px 8px; padding: 8px 10px 6px; border-bottom: 1px solid var(--border); }
+.dup-group { border-bottom: 1px dashed var(--border); padding: 6px 0 8px; margin-bottom: 2px; }
+.dup-group:last-child { border-bottom: none; margin-bottom: 0; }
+.dup-group-head { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 4px; }
+.dup-group-head .dup-key { color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.dup-keepall { flex-shrink: 0; border: 1px solid var(--border); background: none; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; color: var(--text-secondary); }
+.dup-keepall:hover { color: var(--text); border-color: var(--text-secondary); }
+.dup-group.dup-kept .dup-choice { opacity: 0.5; }
+.dup-group.dup-kept .dup-choice input[type="radio"] { visibility: hidden; }
