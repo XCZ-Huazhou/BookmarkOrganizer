@@ -487,18 +487,26 @@
           updateDedupButtonText();
         });
         label.appendChild(radio);
+        // 两行显示：标题在上，网址+路径在下——标题乱码/重名时靠 URL 分辨
+        const textWrap = document.createElement('span');
+        textWrap.className = 'dup-text';
         const name = document.createElement('span');
         name.className = 'dup-name';
         name.textContent = it.title || it.url;
         name.title = it.url;
-        label.appendChild(name);
-        if (it.path) {
-          const pathSpan = document.createElement('span');
-          pathSpan.className = 'dup-path';
-          pathSpan.textContent = it.path;
-          pathSpan.title = it.path;
-          label.appendChild(pathSpan);
-        }
+        textWrap.appendChild(name);
+        const meta = document.createElement('span');
+        meta.className = 'dup-meta';
+        let hostLine = it.url || '';
+        try {
+          const u = new URL(it.url);
+          hostLine = u.host + (u.pathname === '/' ? '' : u.pathname);
+        } catch {}
+        if (it.path) hostLine += ' · ' + it.path;
+        meta.textContent = hostLine;
+        meta.title = (it.url || '') + (it.path ? ' · ' + it.path : '');
+        textWrap.appendChild(meta);
+        label.appendChild(textWrap);
         groupBox.appendChild(label);
       });
       box.appendChild(groupBox);

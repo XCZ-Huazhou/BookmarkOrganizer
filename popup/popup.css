@@ -191,3 +191,7 @@ body {
 .dup-choice input[type="radio"] { flex-shrink: 0; margin: 0; }
 .dup-choice .dup-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
 .dup-choice .dup-path { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-left: auto; padding-left: 8px; font-size: 11px; color: var(--text-secondary); }
+.dup-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.dup-text .dup-name { color: var(--text); }
+.dup-text .dup-meta { font-size: 11px; color: var(--text-secondary); }
+.dup-choice input[type="radio"] { margin-top: 3px; }
